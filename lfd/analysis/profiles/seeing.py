@@ -4,12 +4,13 @@ effects of atmospheric seeing on a point source. The function is described in:
   Bektesevic & Vinkovic et. al. 2017 (arxiv: 1707.07223)
 """
 import numpy as np
+from scipy.interpolate import interp1d
 
 from lfd.analysis.profiles.convolutionobj import ConvolutionObject
 from lfd.analysis.profiles.consts import FWHM2SIGMA
+import os
 
-
-__all__ = ["GausKolmogorov"]
+__all__ = ["GausKolmogorov", "VonKarman"]
 
 
 class GausKolmogorov(ConvolutionObject):
@@ -49,7 +50,7 @@ class GausKolmogorov(ConvolutionObject):
         sigma2 = 2*sigma*sigma
 
         def gk(x):
-            lambda x: 0.909 * (1 / (np.pi * sigma2) * np.exp((-x * x) / sigma2)
+            return 0.909 * (1 / (np.pi * sigma2) * np.exp((-x * x) / sigma2)
                                + 0.1 * (1 / (np.pi * sigma2) * np.exp((-x * x) / sigma2)))
         try:
             return gk(r)
@@ -78,7 +79,10 @@ class VonKarman(ConvolutionObject):
         self.sigma2 = 2.*self.sigma
         
         ## Load VK datapoints
-        vk_atm = np.loadtxt('data/r_vonK_Kolm.txt')
+        fname = 'r_vonK_Kolm.txt'
+        this_file = os.path.abspath(__file__)
+        this_dir = os.path.dirname(this_file)
+        vk_atm = np.loadtxt(os.path.join(this_dir, 'data', fname))
         
         ## Extend to negative
         vk_x = np.zeros(2*vk_atm.shape[0]-1)

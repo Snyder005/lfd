@@ -123,7 +123,7 @@ class DiskSource(ConvolutionObject):
     def __init__(self, h, radius, res=0.001, **kwargs):
         self.h = h
         self.r = radius
-        self.theta = radius/(2*h*1000.) * RAD2ARCSEC
+        self.theta = radius/(h*1000.) * RAD2ARCSEC
 
         scale = np.arange(-2*self.theta, 2*self.theta, self.theta*res)
         obj = self.f(scale)
@@ -149,7 +149,7 @@ class DiskSource(ConvolutionObject):
         theta = self.theta
 
         def _f(x):
-            lambda x: 2*np.sqrt(theta**2-x**2)/(np.pi*theta**2)
+            return 2*np.sqrt(theta**2-x**2)/(np.pi*theta**2)
 
         # testing showed faster abs performs faster for smaller arrays and
         # logical_or outperforms abs by 12% for larger ones

@@ -88,7 +88,7 @@ class FluxPerAngle(ConvolutionObject):
         # small negative numbers, We silence that warning.
         with np.errstate(invalid='ignore'):
             def defocusf(x):
-                lambda x: 2./(np.pi*(thetao2 - thetai2)) * (
+                return 2./(np.pi*(thetao2 - thetai2)) * (
                     np.nan_to_num(np.sqrt(thetao2-x*x))
                     - np.nan_to_num(0.5*(np.sign(thetai-x)+1) * np.sqrt(thetai2-x*x))
                 )
