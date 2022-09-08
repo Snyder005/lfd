@@ -13,9 +13,7 @@ from lfd.analysis.profiles.convolutionobj import ConvolutionObject
 from lfd.analysis.profiles.consts import RAD2ARCSEC
 import lfd.analysis.profiles.utils as utils
 
-
-__all__ = ["PointSource", "GaussianSource", "DiskSource", "RabinaSource", "exp_fwhms"]
-
+__all__ = ["PointSource", "GaussianSource", "DiskSource", "RectangularSource", "RabinaSource", "exp_fwhms"]
 
 class PointSource(ConvolutionObject):
     """Simple point like source. Point-like sources are not resolved, therefore
@@ -71,7 +69,6 @@ class PointSource(ConvolutionObject):
             else:
                 return np.array([0.0])
 
-
 class GaussianSource(ConvolutionObject):
     """Simple gaussian intensity profile.
 
@@ -106,7 +103,6 @@ class GaussianSource(ConvolutionObject):
             rr = np.array(r, dtype=float)
 
         return self._f(rr)
-
 
 class DiskSource(ConvolutionObject):
     """Brightness profile of a disk-like source.
@@ -175,6 +171,70 @@ class DiskSource(ConvolutionObject):
         right = self.scale[np.where(self.obj > 0)[0][-1]]
         return right-left
 
+class RectangularSource(ConvolutionObject):
+    """Brightness profile of a rectangular-like source.
+    Parameters
+    ----------
+    h : float
+      height of the object, in meters
+    length : float
+      length of the object, in meters
+    width : float
+      width of the object, in meters
+    res : float
+      desired resolution, in arcseconds"""
+    def __init__(self, h, length, width, res=0.001, **kwargs):
+        self.h = h
+        self.length = length
+        self.width = width
+        self.theta = width/(2*h*1000.) * RAD2ARCSEC
+        
+        scale = np.arange(-2*self.theta, 2*self.theta, self.theta*res)
+        obj = self.f(scale)
+        
+        ConvolutionObject.__init__(self, obj, scale)
+        
+    def f(self, r, units="arcsec"):
+        """Returns the brightness value of the object at a point. By default
+        the units of the scale are arcseconds but radians are also accepted.
+        """
+
+        if any((isinstance(r, int), isinstance(r, float),
+               isinstance(r, complex))):
+            rr = np.array([r], dtype=float)
+        else:
+            rr = np.array(r, dtype=float)
+
+        if units.upper() == "RAD":
+            rr = rr*RAD2ARCSEC
+
+        theta = self.theta
+        
+        def _f(x):
+            return 1/(2*theta)
+
+        # testing showed faster abs performs faster for smaller arrays and
+        # logical_or outperforms abs by 12% for larger ones
+        if len(rr) < 50000:
+            mask = np.abs(rr) >= theta
+        else:
+            mask = np.logical_or(rr > theta, rr < -theta)
+            
+        rr[mask] = 0
+        rr[~mask] = _f(rr[~mask])
+
+        return rr        
+
+    def width(self):
+        """FWHM is not a good metric for measuring the end size of the object
+        because disk-like profiles do not taper off towards the top. Instead
+        width of the object (difference between first and last point with
+        brightness above zero) is a more appropriate measure of the size of the
+        object.
+        """
+        left = self.scale[np.where(self.obj > 0)[0][0]]
+        right = self.scale[np.where(self.obj > 0)[0][-1]]
+        return right-left
 
 class RabinaSource(ConvolutionObject):
     """::
@@ -286,7 +346,6 @@ class RabinaSource(ConvolutionObject):
                                     message="Required value estimated by interpolation.")
             rr[~mask] = self._guessf(rr[~mask])
         return rr
-
 
 def exp_fwhms(tau, n, duration):
     """Generates series of n exponentially smaller FWHM values depending on the
